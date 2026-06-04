@@ -20,6 +20,7 @@ import Attendance from "./pages/Attendance";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Measurements from "./pages/Measurements";
 
+
 export default function App() {
   return (
     <Routes>

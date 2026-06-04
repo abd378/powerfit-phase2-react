@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import { generatePdfReport } from "../utils/generatePdf";
 import {
   Droplets,
   Flame,
@@ -282,6 +283,27 @@ export default function Dashboard() {
               Reset
             </button>
           </div>
+          <button
+  className="primary-btn"
+  onClick={() =>
+    generatePdfReport({
+      name: profile?.full_name || "",
+      email: profile?.email || "",
+      age: profile?.age || "",
+      height: profile?.height || "",
+      weight: profile?.weight || "",
+      goal: profile?.goal || "",
+      membership: profile?.membership || "",
+
+      bookings: bookings.length,
+      challenges: challenges.length,
+      workouts: workoutHistory.length,
+      attendance: attendanceCount,
+    })
+  }
+>
+  Download PDF Report
+</button>
         </div>
 
         <section className="nutrition-widget">
