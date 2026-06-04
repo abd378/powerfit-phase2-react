@@ -1,101 +1,101 @@
+import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { motion } from "framer-motion";
-import { Star, Dumbbell, Award } from "lucide-react";
 import { Link } from "react-router-dom";
-
-import t1 from "../assets/t1.jpg";
-import t2 from "../assets/t2.jpg";
-import t3 from "../assets/t3.jpg";
-import t4 from "../assets/t4.jpg";
+import { Star, Dumbbell, DollarSign } from "lucide-react";
+import { supabase } from "../lib/supabaseClient";
 
 export default function Trainers() {
-  const trainers = [
-    {
-      img: t1,
-      name: "Alex Carter",
-      role: "Strength Coach",
-      experience: "8 Years Experience",
-      specialty: "Muscle Building",
-    },
-    {
-      img: t2,
-      name: "Maya Smith",
-      role: "Cardio Trainer",
-      experience: "6 Years Experience",
-      specialty: "Fat Loss",
-    },
-    {
-      img: t3,
-      name: "John Miller",
-      role: "Fitness Coach",
-      experience: "10 Years Experience",
-      specialty: "Full Body Training",
-    },
-    {
-      img: t4,
-      name: "Sara Wilson",
-      role: "Yoga Coach",
-      experience: "5 Years Experience",
-      specialty: "Flexibility",
-    },
-  ];
+  const [trainers, setTrainers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  async function fetchTrainers() {
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("trainers")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) alert(error.message);
+    else setTrainers(data || []);
+
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    fetchTrainers();
+  }, []);
 
   return (
     <>
       <Navbar />
 
       <main className="page-screen">
-        <motion.div
-          className="page-header"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <span className="badge">Our Trainers</span>
-          <h1>Meet Professional Coaches</h1>
+        <div className="page-header">
+          <span className="badge">Expert Coaches</span>
+          <h1>Meet Our Trainers</h1>
           <p>
-            Our trainers help members build strength, burn fat, improve health,
-            and stay motivated.
+            Browse real trainers loaded from Supabase and book sessions based on
+            your fitness goals.
           </p>
-        </motion.div>
-
-        <div className="trainers-page-grid">
-          {trainers.map((trainer, index) => (
-            <motion.div
-              className="trainer-card"
-              key={trainer.name}
-              initial={{ opacity: 0, y: 35 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.15 }}
-            >
-              <img src={trainer.img} alt={trainer.name} />
-
-              <div className="trainer-content">
-                <h3>{trainer.name}</h3>
-                <p className="trainer-role">{trainer.role}</p>
-
-                <div className="trainer-info">
-                  <span>
-                    <Award size={17} /> {trainer.experience}
-                  </span>
-                  <span>
-                    <Dumbbell size={17} /> {trainer.specialty}
-                  </span>
-                  <span>
-                    <Star size={17} /> 4.9 Rating
-                  </span>
-                </div>
-
-                <Link
-  to={`/trainer/${index + 1}`}
-  className="primary-btn"
->
-  View Profile
-</Link>
-              </div>
-            </motion.div>
-          ))}
         </div>
+
+        {loading ? (
+          <div className="booking-empty">
+            <h3>Loading trainers...</h3>
+          </div>
+        ) : trainers.length === 0 ? (
+          <div className="booking-empty">
+            <h3>No trainers available yet</h3>
+            <p>Admin can add trainers from Manage Trainers.</p>
+          </div>
+        ) : (
+          <section className="trainers-grid">
+            {trainers.map((trainer) => (
+              <div className="trainer-card" key={trainer.id}>
+                <img
+                  src={
+                    trainer.image_url ||
+                    "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b"
+                  }
+                  alt={trainer.name}
+                />
+
+                <div className="trainer-content">
+                  <h2>{trainer.name}</h2>
+                  <p>{trainer.specialty}</p>
+
+                  <div className="trainer-info-row">
+                    <span>
+                      <Dumbbell size={16} />
+                      {trainer.experience}
+                    </span>
+
+                    <span>
+                      <Star size={16} />
+                      {trainer.rating}
+                    </span>
+
+                    <span>
+                      <DollarSign size={16} />
+                      {trainer.price}/session
+                    </span>
+                  </div>
+
+                  <p className="trainer-bio">
+                    {trainer.bio ||
+                      "Professional PowerFit trainer ready to help you reach your goals."}
+                  </p>
+
+                  <Link to="/booking" className="primary-btn">
+                    Book Session
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
       </main>
 
       <Footer />

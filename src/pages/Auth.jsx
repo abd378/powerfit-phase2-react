@@ -1,79 +1,167 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Dumbbell } from "lucide-react";
+import { supabase } from "../lib/supabaseClient";
 
 export default function Auth() {
-  const [isSignup, setIsSignup] = useState(false);
   const navigate = useNavigate();
 
-  function handleSubmit(e) {
+  const [isLogin, setIsLogin] = useState(true);
+
+  const [form, setForm] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e) {
     e.preventDefault();
+    setError("");
 
-    if (isSignup) {
-      localStorage.setItem("hasAccount", "true");
-      localStorage.setItem("isLoggedIn", "true");
-      alert("Account Created Successfully!");
-      navigate("/dashboard");
-    } else {
-      const hasAccount = localStorage.getItem("hasAccount") === "true";
+    if (!form.email || !form.password) {
+      setError("Please enter email and password.");
+      return;
+    }
 
-      if (!hasAccount) {
-        alert("You must create an account first.");
-        setIsSignup(true);
+    if (!isLogin && !form.fullName) {
+      setError("Please enter your full name.");
+      return;
+    }
+
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
+    setLoading(true);
+
+    if (isLogin) {
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      });
+
+      if (loginError) {
+        setError(loginError.message);
+        setLoading(false);
         return;
       }
 
-      localStorage.setItem("isLoggedIn", "true");
-      alert("Login Successful!");
+      setLoading(false);
       navigate("/dashboard");
+      return;
     }
+
+    const { data, error: signupError } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+    });
+
+    if (signupError) {
+      setError(signupError.message);
+      setLoading(false);
+      return;
+    }
+
+    if (data.user) {
+      const { error: profileError } = await supabase.from("profiles").insert({
+        id: data.user.id,
+        full_name: form.fullName,
+        email: form.email,
+        role: "member",
+        goal: "Build Muscle",
+        membership: "Basic",
+      });
+
+      if (profileError) {
+        setError(profileError.message);
+        setLoading(false);
+        return;
+      }
+    }
+
+    setLoading(false);
+    navigate("/dashboard");
   }
 
   return (
-    <div className="auth-page">
-      <Link to="/" className="auth-logo">
-        <Dumbbell />
-        PowerFit
-      </Link>
-
-      <div className="auth-card">
-        <h2>{isSignup ? "Create Account" : "Welcome Back"}</h2>
-
-        <p>
-          {isSignup
-            ? "Create your account to access all PowerFit features."
-            : "Login to continue to your fitness dashboard."}
-        </p>
-
-        <div className="auth-tabs">
-          <button
-            type="button"
-            className={!isSignup ? "active" : ""}
-            onClick={() => setIsSignup(false)}
-          >
-            Login
-          </button>
-
-          <button
-            type="button"
-            className={isSignup ? "active" : ""}
-            onClick={() => setIsSignup(true)}
-          >
-            Sign Up
-          </button>
+    <main className="auth-screen">
+      <div className="auth-panel">
+        <div className="auth-brand">
+          <Dumbbell size={42} />
+          <h1>{isLogin ? "Welcome Back" : "Join PowerFit"}</h1>
+          <p>
+            {isLogin
+              ? "Login to continue your fitness journey."
+              : "Create your fitness account and start tracking your progress."}
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          {isSignup && <input type="text" placeholder="Full Name" required />}
+        {error && <div className="auth-error">{error}</div>}
 
-          <input type="email" placeholder="Email Address" required />
-          <input type="password" placeholder="Password" required />
+        <form onSubmit={handleSubmit} className="auth-form">
+          {!isLogin && (
+            <input
+              type="text"
+              placeholder="Full Name"
+              value={form.fullName}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  fullName: e.target.value,
+                })
+              }
+            />
+          )}
 
-          <button className="primary-btn" type="submit">
-            {isSignup ? "Create Account" : "Login"}
+          <input
+            type="email"
+            placeholder="Email Address"
+            value={form.email}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                email: e.target.value,
+              })
+            }
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            value={form.password}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                password: e.target.value,
+              })
+            }
+          />
+
+          <button className="primary-btn" type="submit" disabled={loading}>
+            {loading
+              ? "Please wait..."
+              : isLogin
+              ? "Login"
+              : "Create Account"}
           </button>
         </form>
+
+        <button
+          className="auth-switch"
+          onClick={() => {
+            setIsLogin(!isLogin);
+            setError("");
+          }}
+        >
+          {isLogin
+            ? "Don't have an account? Sign up"
+            : "Already have an account? Login"}
+        </button>
       </div>
-    </div>
+    </main>
   );
 }
